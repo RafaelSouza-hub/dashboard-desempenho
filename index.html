@@ -210,7 +210,6 @@ try {
   }
 } catch (e) {}
 </script>
-<script src="dados.js"></script>
 <script>
 window.iniciarDashboard = function (D) {
 'use strict';
@@ -828,6 +827,9 @@ function abrirProtegido(pac) {
   })();
 }
 
+// O dados.js é sempre buscado na versão mais nova (o "?v=" impede o navegador
+// de usar uma cópia antiga guardada), para os dados do mês aparecerem na hora.
+function abrir() {
 if (window.DADOS_PREVIA) window.iniciarDashboard(window.DADOS_PREVIA);
 else if (window.DADOS_DASHBOARD) window.iniciarDashboard(window.DADOS_DASHBOARD);
 else if (window.DADOS_DASHBOARD_CRIPTO) {
@@ -835,6 +837,14 @@ else if (window.DADOS_DASHBOARD_CRIPTO) {
   else abrirProtegido(window.DADOS_DASHBOARD_CRIPTO);
 }
 else window.iniciarDashboard(null);
+}
+
+if (window.DADOS_PREVIA) { abrir(); return; }
+app.innerHTML = '<div class="lock"><p class="lock-load">Carregando…</p></div>';
+var s = document.createElement('script');
+s.src = 'dados.js?v=' + Date.now();
+s.onload = s.onerror = abrir;
+document.head.appendChild(s);
 })();
 </script>
 </body>
