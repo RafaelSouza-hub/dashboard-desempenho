@@ -237,7 +237,7 @@ function load(k) { try { return localStorage.getItem(k); } catch (e) { return nu
 /* ---------- modelo ---------- */
 var DIMS = ['semestre', 'oferta', 'curso', 'matriz', 'disciplina'];
 var DI = { semestre: 0, oferta: 1, curso: 2, matriz: 3, disciplina: 4 };
-var FILTROS = ['curso', 'matriz', 'disciplina', 'oferta', 'semestre'];
+var FILTROS = ['semestre', 'oferta', 'curso', 'matriz', 'disciplina'];
 var ROTULO = { curso: 'Curso', matriz: 'Matriz', disciplina: 'Disciplina', oferta: 'Oferta', semestre: 'Semestre' };
 // EAD: [.., total, aprovAntesPF, aprovAposPF, reprovPF, ava0, avaMaior0]
 //      emPFcomAva0, ava0AprovadosAposPF
@@ -593,9 +593,10 @@ function render() {
   var desloc = ancora ? ancora.getBoundingClientRect().top : null;
   app.innerHTML =
     (PREVIA ? '<div class="banner">Prévia gerada pelo atualizador — estes dados ainda não foram publicados.</div>' : '') +
+    '<div class="sticky" id="barra">' +
     '<header class="top"><div class="brand"><img class="brand-logo" src="' + LOGO + '" alt="Faculdade Unyleya"><span class="brand-sep"></span>' +
     '<div><h1>Desempenho Acadêmico</h1><p>' + esc(meta()) + '</p></div></div></header>' +
-    '<div class="sticky" id="barra"><nav class="secnav" aria-label="Seções do relatório"><span class="secnav-l">Ir para:</span>' +
+    '<nav class="secnav" aria-label="Seções do relatório"><span class="secnav-l">Ir para:</span>' +
     PAGINAS.map(function (pg, i) {
       return '<button class="sec-btn' + (pg.id === state.secao ? ' on' : '') + '" data-pag="' + pg.id + '"><span class="num">' + (i + 1) + '</span>' + pg.nome + '</button>';
     }).join('') + '</nav></div>' +
