@@ -70,6 +70,11 @@ button,select,input{font:inherit;color:inherit}
 .clear:hover{background:var(--accent-soft)}
 .clear[disabled]{color:var(--muted);border-color:var(--border);cursor:default;background:none;opacity:.7}
 .f-hint{font-size:12px;color:var(--muted);line-height:1.4}
+.credito{margin-top:auto;padding-top:12px;border-top:1px solid var(--grid);display:grid;gap:1px;font-size:12px;color:var(--ink-2);line-height:1.35}
+.credito-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.credito b{color:var(--brand-wine);font-size:13px}
+.foot-cred{margin:0 0 6px;font-size:12.5px;color:var(--ink-2)}
+.foot-cred b{color:var(--brand-wine)}
 
 /* Conteúdo */
 main{padding:18px 22px 28px;min-width:0}
@@ -237,6 +242,7 @@ function load(k) { try { return localStorage.getItem(k); } catch (e) { return nu
 var DIMS = ['semestre', 'oferta', 'curso', 'matriz', 'disciplina'];
 var DI = { semestre: 0, oferta: 1, curso: 2, matriz: 3, disciplina: 4 };
 var FILTROS = ['semestre', 'oferta', 'curso', 'matriz', 'disciplina'];
+var AUTOR = { nome: 'Rafael de Souza Santos', cargo: 'Supervisor de Avaliação', setor: 'Coordenação de Avaliação' };
 var ROTULO = { curso: 'Curso', matriz: 'Matriz', disciplina: 'Disciplina', oferta: 'Oferta', semestre: 'Semestre' };
 // EAD: [.., total, aprovAntesPF, aprovAposPF, reprovPF, ava0, avaMaior0]
 //      emPFcomAva0, ava0AprovadosAposPF
@@ -468,13 +474,14 @@ function pagGeral() {
     kpi('Reprovados', p(T ? a[E_RPF] / T : 0), n(a[E_RPF]) + ' de ' + n(T), '--s-neg') +
     kpi('Ficaram em Prova Final', p(T ? emPF / T : 0), n(emPF) + ' de ' + n(T), '--s-pf') +
     kpi('Aprovados após a PF', p(emPF ? a[E_AAP] / emPF : 0), n(a[E_AAP]) + ' de ' + n(emPF) + ' em PF', '--s-pf') +
-    kpi('AVA = 0', p(T ? a[E_A0] / T : 0), n(a[E_A0]) + ' sem atividade no AVA', '--s-neg') +
+    kpi('AVA = 0', p(T ? a[E_A0] / T : 0), n(a[E_A0]) + ' de ' + n(T) + ' sem atividade no AVA', '--s-neg') +
     kpi('Em PF com AVA = 0', p(emPF ? a[E_PF0] / emPF : 0), n(a[E_PF0]) + ' de ' + n(emPF) + ' em PF', '--s-neg') +
     kpi('AVA = 0 aprovados após a PF', p(a[E_PF0] ? a[E_PF0A] / a[E_PF0] : 0), n(a[E_PF0A]) + ' de ' + n(a[E_PF0]) + ' com AVA = 0 em PF', '--s-pf') +
     '</div>';
   h += '<p class="kpi-grp">Conceito</p><div class="kpis">' +
-    kpi('Concluído', p(TC ? c[C_OK] / TC : 0), '', '--s-pos') +
-    kpi('Não concluído', p(TC ? c[C_NOK] / TC : 0), '', '--s-neg') + '</div>';
+    kpi('Matrículas avaliadas', n(TC), 'matrículas em disciplinas', '--axis') +
+    kpi('Concluído', p(TC ? c[C_OK] / TC : 0), n(c[C_OK]) + ' de ' + n(TC), '--s-pos') +
+    kpi('Não concluído', p(TC ? c[C_NOK] / TC : 0), n(c[C_NOK]) + ' de ' + n(TC), '--s-neg') + '</div>';
 
   h += '<div class="grid">';
   h += cartaoBarras({
@@ -563,17 +570,20 @@ function barraFiltros() {
       (state.aberto === k ? '<div class="flt-panel"><input class="flt-search" placeholder="Pesquisar ' + ROTULO[k].toLowerCase() + '…" value="' + esc(state.busca) + '" data-busca="' + k + '"><div class="flt-list">' + listaFiltro(k) + '</div></div>' : '') +
       '</div>';
   }).join('') + '<button class="clear" data-limpar' + (algum ? '' : ' disabled') + '>Limpar filtros</button>' +
-    '<span class="f-hint">Os filtros valem para o relatório inteiro. Você também pode clicar em um curso ou disciplina nos gráficos para filtrar.</span>';
+    '<span class="f-hint">Os filtros valem para o relatório inteiro. Você também pode clicar em um curso ou disciplina nos gráficos para filtrar.</span>' +
+    '<div class="credito"><span class="credito-l">Desenvolvido por</span><b>' + AUTOR.nome + '</b><span>' + AUTOR.cargo + '</span><span>' + AUTOR.setor + '</span></div>';
 }
 
 /* ---------- render ---------- */
 function meta() {
   var partes = [];
-  var ofs = {};
-  D.ead.concat(D.conceito).forEach(function (r) { ofs[D.dim.semestre[r[0]] + ' ' + D.dim.oferta[r[1]]] = 1; });
-  var nomes = Object.keys(ofs).sort(cmpTxt);
-  if (nomes.length === 1) partes.push('Oferta ' + D.dim.oferta[0] + ' · Semestre ' + D.dim.semestre[0]);
-  else if (nomes.length > 1) partes.push(nomes.length + ' ofertas disponíveis: ' + nomes.join(', '));
+  // Última oferta = semestre mais recente e, dentro dele, a maior oferta (ex.: D3 2026.2)
+  var ultima = null;
+  D.ead.concat(D.conceito).forEach(function (r) {
+    if (!ultima || cmpTxt(D.dim.semestre[r[0]], D.dim.semestre[ultima[0]]) > 0 ||
+      (r[0] === ultima[0] && cmpTxt(D.dim.oferta[r[1]], D.dim.oferta[ultima[1]]) > 0)) ultima = r;
+  });
+  if (ultima) partes.push('Última oferta adicionada: ' + D.dim.oferta[ultima[1]] + ' ' + D.dim.semestre[ultima[0]]);
   if (D.geradoEm) { var d = new Date(D.geradoEm); if (!isNaN(d)) partes.push('Atualizado em ' + d.toLocaleDateString('pt-BR')); }
   return partes.join(' · ');
 }
@@ -601,7 +611,7 @@ function render() {
     }).join('') + '</nav></div>' +
     '<div class="layout"><aside class="filters" id="filtros" aria-label="Filtros">' + barraFiltros() + '</aside>' +
     '<main>' + corpo +
-    '<footer>Regras: Prova Final quando Nota AVA &lt; ' + n(D.regras.corteAva) + '. Aprovado após a PF quando (Nota AVA + Nota PF) ÷ 2 ≥ ' + n(D.regras.mediaAprovacaoPF) +
+    '<footer><p class="foot-cred">Dashboard desenvolvido por <b>' + AUTOR.nome + '</b> — ' + AUTOR.cargo + ' · ' + AUTOR.setor + '</p>Regras: Prova Final quando Nota AVA &lt; ' + n(D.regras.corteAva) + '. Aprovado após a PF quando (Nota AVA + Nota PF) ÷ 2 ≥ ' + n(D.regras.mediaAprovacaoPF) +
     '. Notas vazias ou "-" contam como 0. Não entram linhas com Data Bloqueada Alocação preenchida nem com status Cursando.</footer></main></div>';
   window.scrollTo(0, rolagem);
   var nova = desloc != null && document.getElementById('sec-' + state.secao);
