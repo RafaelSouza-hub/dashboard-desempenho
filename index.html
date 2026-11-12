@@ -29,6 +29,11 @@ button,select,input{font:inherit;color:inherit}
 .brand-sep{width:1px;align-self:stretch;margin:4px 6px;background:var(--top-line)}
 .brand h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.1px}
 .top{border-bottom:4px solid var(--brand-coral)}
+.selo-wrap{margin-left:auto;position:relative}
+.selo{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.32);color:var(--top-ink);border-radius:999px;padding:7px 16px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.selo:hover,.selo-wrap.aberto .selo{background:rgba(255,255,255,.2)}
+.selo-pop{display:none;position:absolute;right:0;top:calc(100% + 10px);width:340px;max-width:calc(100vw - 32px);background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:12px 14px;font-size:13px;line-height:1.5;z-index:40}
+.selo-wrap:hover .selo-pop,.selo-wrap.aberto .selo-pop{display:block}
 .brand p{margin:0;font-size:12px;color:var(--top-ink-2)}
 .icon-btn{margin-left:auto;background:none;border:1px solid var(--top-line);color:var(--top-ink);border-radius:6px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;flex:none}
 .icon-btn:hover{background:rgba(255,255,255,.08)}
@@ -477,6 +482,9 @@ function pagGeral() {
     kpi('AVA = 0', p(T ? a[E_A0] / T : 0), n(a[E_A0]) + ' de ' + n(T) + ' sem atividade no AVA', '--s-neg') +
     kpi('Em PF com AVA = 0', p(emPF ? a[E_PF0] / emPF : 0), n(a[E_PF0]) + ' de ' + n(emPF) + ' em PF', '--s-neg') +
     kpi('AVA = 0 aprovados após a PF', p(a[E_PF0] ? a[E_PF0A] / a[E_PF0] : 0), n(a[E_PF0A]) + ' de ' + n(a[E_PF0]) + ' com AVA = 0 em PF', '--s-pf') +
+    // Reprovados com AVA = 0: todo aluno com AVA = 0 vai para a PF; os que não passam nela reprovam
+    kpi('Reprovados com AVA = 0', p(a[E_RPF] ? (a[E_PF0] - a[E_PF0A]) / a[E_RPF] : 0),
+      n(a[E_PF0] - a[E_PF0A]) + ' de ' + n(a[E_RPF]) + ' reprovados não fizeram atividade no AVA', '--s-neg') +
     '</div>';
   h += '<p class="kpi-grp">Conceito</p><div class="kpis">' +
     kpi('Matrículas avaliadas', n(TC), 'matrículas em disciplinas', '--axis') +
@@ -604,14 +612,19 @@ function render() {
     (PREVIA ? '<div class="banner">Prévia gerada pelo atualizador — estes dados ainda não foram publicados.</div>' : '') +
     '<div class="sticky" id="barra">' +
     '<header class="top"><div class="brand"><img class="brand-logo" src="' + LOGO + '" alt="Faculdade Unyleya"><span class="brand-sep"></span>' +
-    '<div><h1>Desempenho Acadêmico</h1><p>' + esc(meta()) + '</p></div></div></header>' +
+    '<div><h1>Desempenho Acadêmico</h1><p>' + esc(meta()) + '</p></div></div>' +
+    '<div class="selo-wrap' + (state.selo ? ' aberto' : '') + '"><button class="selo" data-selo aria-expanded="' + !!state.selo + '" aria-describedby="selo-pop">' +
+    '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v4.5M8 4.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+    'Somente disciplinas padrão</button>' +
+    '<div class="selo-pop" id="selo-pop" role="tooltip">Este painel considera apenas as <b>disciplinas padrão</b>. ' +
+    'As <b>disciplinas estendidas</b> não estão incluídas.</div></div></header>' +
     '<nav class="secnav" aria-label="Seções do relatório"><span class="secnav-l">Ir para:</span>' +
     PAGINAS.map(function (pg, i) {
       return '<button class="sec-btn' + (pg.id === state.secao ? ' on' : '') + '" data-pag="' + pg.id + '"><span class="num">' + (i + 1) + '</span>' + pg.nome + '</button>';
     }).join('') + '</nav></div>' +
     '<div class="layout"><aside class="filters" id="filtros" aria-label="Filtros">' + barraFiltros() + '</aside>' +
     '<main>' + corpo +
-    '<footer><p class="foot-cred">Dashboard desenvolvido por <b>' + AUTOR.nome + '</b> — ' + AUTOR.cargo + ' · ' + AUTOR.setor + '</p>Regras: Prova Final quando Nota AVA &lt; ' + n(D.regras.corteAva) + '. Aprovado após a PF quando (Nota AVA + Nota PF) ÷ 2 ≥ ' + n(D.regras.mediaAprovacaoPF) +
+    '<footer><p class="foot-cred">Dashboard desenvolvido por <b>' + AUTOR.nome + '</b> — ' + AUTOR.cargo + ' · ' + AUTOR.setor + '</p>Considera apenas as disciplinas padrão; as disciplinas estendidas não estão incluídas. Regras: Prova Final quando Nota AVA &lt; ' + n(D.regras.corteAva) + '. Aprovado após a PF quando (Nota AVA + Nota PF) ÷ 2 ≥ ' + n(D.regras.mediaAprovacaoPF) +
     '. Notas vazias ou "-" contam como 0. Não entram linhas com Data Bloqueada Alocação preenchida nem com status Cursando.</footer></main></div>';
   window.scrollTo(0, rolagem);
   var nova = desloc != null && document.getElementById('sec-' + state.secao);
@@ -690,6 +703,17 @@ function alternaFiltro(dim, idx, somar) {
 app.addEventListener('click', function (e) {
   var t = e.target;
   var el;
+  if ((el = t.closest('[data-selo]'))) {
+    state.selo = !state.selo;
+    el.parentNode.classList.toggle('aberto', state.selo);
+    el.setAttribute('aria-expanded', state.selo);
+    return;
+  }
+  if (state.selo) {
+    state.selo = false;
+    var sw = app.querySelector('.selo-wrap');
+    if (sw) sw.classList.remove('aberto');
+  }
   if ((el = t.closest('[data-pag]'))) {
     if (state.aberto) { state.aberto = null; renderFiltros(); }
     irPara(el.dataset.pag); return;
